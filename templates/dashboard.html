@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+        }
+        .header {
+            background-color: #007BFF;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 24px;
+        }
+        .tabs {
+            display: flex;
+            justify-content: center;
+            background-color: #ffffff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin: 20px 0;
+            padding: 10px;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            margin: 0 5px;
+            border-radius: 4px;
+            font-size: 16px;
+            background-color: #f9f9f9;
+        }
+        .tab.active {
+            background-color: #007BFF;
+            color: white;
+            font-weight: bold;
+        }
+        .table-container {
+            margin: 20px auto;
+            width: 90%;
+            max-width: 1200px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            overflow-x: auto;
+            text-align: center;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            text-align: left;
+            padding: 8px;
+        }
+        th {
+            background-color: #007BFF;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 34px;
+            height: 20px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 20px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #007BFF;
+        }
+        input:checked + .slider:before {
+            transform: translateX(14px);
+        }
+        .logout {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+        }
+        .logout button {
+            padding: 10px 20px;
+            background-color: red;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .logout button:hover {
+            background-color: darkred;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        Панель администратора
+        <div class="logout">
+            <form method="POST" action="/logout">
+                <button type="submit">Выйти</button>
+            </form>
+        </div>
+    </div>
+    <div class="tabs">
+        <div id="tab-admins" class="tab active" onclick="loadData('vpn_users.sql', 'users', this, 'Подписчики VPN')">Подписчики VPN</div>
+    </div>
+    <div class="table-container">
+        <table id="data-table">
+            <thead>
+                <tr>
+                    <!-- Заголовки таблицы будут добавлены динамически -->
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Данные таблицы будут добавлены динамически -->
+            </tbody>
+        </table>
+        <div id="empty-message" style="display: none; font-size: 18px; color: #555;">
+            База данных пуста
+        </div>
+    </div>
+
+    <script>
+        const headersMap = {
+            admins: [
+                "id", "id пользователя", "id Ключа", "Ключ", "Количество дней подписки", 
+                "Подписка (1 - Активирована, 0 - Нет) (Безлимит)", "Активировать/Отменить подписку"
+            ]
+        };
+
+    async function loadData() {
+        const response = await fetch(`/api/data`);
+        const data = await response.json();
+        const table = document.getElementById('data-table');
+        const thead = table.querySelector('thead tr');
+        const tbody = table.querySelector('tbody');
+        const emptyMessage = document.getElementById('empty-message');
+
+        // Если ошибка или данных нет
+        if (data.error || !data.records || data.records.length === 0) {
+            table.style.display = 'none';
+            emptyMessage.style.display = 'block';
+            return;
+        }
+
+        table.style.display = 'table';
+        emptyMessage.style.display = 'none';
+
+        // Очищаем заголовки и строки
+        thead.innerHTML = '';
+        tbody.innerHTML = '';
+
+        // Заголовки таблицы
+        const headers = ["ID", "ID Пользователя", "ID VPN Ключа", "VPN Ключ", "Оставшиеся дни подписки", "Подписка", "Управление"];
+        headers.forEach(header => {
+            const th = document.createElement('th');
+            th.textContent = header;
+            thead.appendChild(th);
+        });
+
+        // Добавляем строки данных
+        data.records.forEach(row => {
+            const tr = document.createElement('tr');
+
+            // Заполняем данные
+            const columns = [
+                row.id,
+                row.user_id,
+                row.key_id,
+                row.key,
+                row.subscription_end,
+                row.подписка ? 'Активна' : 'Неактивна'
+            ];
+
+            columns.forEach(value => {
+                const td = document.createElement('td');
+                td.textContent = value;
+                tr.appendChild(td);
+            });
+
+            // Добавляем переключатель
+            const td = document.createElement('td');
+            const switchContainer = document.createElement('label');
+            switchContainer.className = 'switch';
+            const input = document.createElement('input');
+            input.type = 'checkbox';
+            input.checked = row.подписка === 1;
+            const slider = document.createElement('span');
+            slider.className = 'slider';
+            switchContainer.appendChild(input);
+            switchContainer.appendChild(slider);
+            td.appendChild(switchContainer);
+            tr.appendChild(td);
+
+            // Обработчик изменения состояния подписки
+            input.addEventListener('change', async () => {
+                const action = input.checked ? 'activate' : 'deactivate';
+
+                try {
+                    const response = await fetch(`/api/subscription?user_id=${row.id}&action=${action}`, {
+                        method: 'POST',
+                    });
+                    const result = await response.json();
+                    if (result.error) {
+                        alert(`Ошибка: ${result.error}`);
+                        input.checked = !input.checked;
+                    } else {
+                        alert(`Подписка изменена: ${action === 'activate' ? 'Безлимит' : '100 МБ'}`);
+                    }
+                } catch (error) {
+                    alert('Ошибка подключения к серверу.');
+                    input.checked = !input.checked;
+                }
+            });
+
+            tbody.appendChild(tr);
+        });
+    }
+
+// Загрузка данных при загрузке страницы
+document.addEventListener('DOMContentLoaded', loadData);
+
+
+
+        // Загрузка данных для первой вкладки по умолчанию
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData('vpn_users.sql', 'users', document.getElementById('tab-admins'), 'admins');
+        });
+    </script>
+</body>
+</html>
