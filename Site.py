@@ -120,7 +120,7 @@ def update_subscription():
             return jsonify({"error": "Missing 'user_id' or 'action' parameter"}), 400
 
         new_status = 1 if action == 'activate' else 0
-        new_subscription_end = 5 if new_status == 1 else 0
+        new_subscription_end = 30 if new_status == 1 else 0
 
         conn = connect_db()
         cursor = conn.cursor()
@@ -189,7 +189,38 @@ async def send_message(chat_id, text):
     except Exception as e:
         print(f"❌ Ошибка при отправке уведомления пользователю {chat_id}: {e}")
 
+@app.route('/api/broadcast', methods=['POST'])
+def broadcast_message():
+    if 'logged_in' not in session or not session['logged_in']:
+        return jsonify({"error": "Unauthorized"}), 401
 
+    try:
+        data = request.get_json()
+        message = data.get('message')
+
+        if not message:
+            return jsonify({"error": "Message is empty"}), 400
+
+        conn = connect_db()
+        cursor = conn.cursor()
+
+        # Получаем все user_id из базы данных
+        cursor.execute("SELECT user_id FROM users")
+        users = cursor.fetchall()
+        conn.close()
+
+        if not users:
+            return jsonify({"error": "No users found in the database"}), 404
+
+        # Отправляем сообщение каждому пользователю
+        for (user_id,) in users:
+            send_message_sync(user_id, message)
+
+        print(f"✅ Сообщение отправлено {len(users)} пользователям.")
+        return jsonify({"success": True, "sent_to": len(users)})
+    except Exception as e:
+        print(f"❌ Ошибка при отправке сообщения: {e}")
+        return jsonify({"error": str(e)}), 500
 
 # Выход из системы
 @app.route('/logout', methods=['POST'])

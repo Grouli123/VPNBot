@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Database Viewer</title>
+    <title>Административная панель</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -40,7 +40,7 @@
             color: white;
             font-weight: bold;
         }
-        .table-container {
+        .table-container, .message-container {
             margin: 20px auto;
             width: 90%;
             max-width: 1200px;
@@ -49,7 +49,10 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             padding: 20px;
             overflow-x: auto;
-            text-align: center;
+            display: none;
+        }
+        .table-container.active, .message-container.active {
+            display: block;
         }
         table {
             width: 100%;
@@ -106,6 +109,29 @@
         input:checked + .slider:before {
             transform: translateX(14px);
         }
+        textarea {
+            width: 100%;
+            height: 100px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 8px;
+            font-size: 16px;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #send-button {
+            background-color: #007BFF;
+            color: white;
+        }
+        #clear-button {
+            background-color: #FF0000;
+            color: white;
+        }
         .logout {
             position: absolute;
             top: 15px;
@@ -120,9 +146,6 @@
             font-size: 16px;
             cursor: pointer;
         }
-        .logout button:hover {
-            background-color: darkred;
-        }
     </style>
 </head>
 <body>
@@ -135,22 +158,32 @@
         </div>
     </div>
     <div class="tabs">
-        <div id="tab-admins" class="tab active" onclick="loadData('vpn_users.sql', 'users', this, 'Подписчики VPN')">Подписчики VPN</div>
+        <div id="tab-admins" class="tab active" onclick="switchTab('subscribers')">Подписчики VPN</div>
+        <div id="tab-message" class="tab" onclick="switchTab('message')">Написать сообщение</div>
     </div>
-    <div class="table-container">
+
+    <!-- Таблица подписчиков -->
+    <div id="subscribers" class="table-container active">
         <table id="data-table">
             <thead>
                 <tr>
-                    <!-- Заголовки таблицы будут добавлены динамически -->
+                    <!-- Заголовки таблицы -->
                 </tr>
             </thead>
             <tbody>
-                <!-- Данные таблицы будут добавлены динамически -->
+                <!-- Данные таблицы -->
             </tbody>
         </table>
         <div id="empty-message" style="display: none; font-size: 18px; color: #555;">
             База данных пуста
         </div>
+    </div>
+
+    <!-- Вкладка Написать сообщение -->
+    <div id="message" class="message-container">
+        <textarea id="message-box" placeholder="Введите сообщение..."></textarea>
+        <button id="send-button">Отправить</button>
+        <button id="clear-button">Очистить</button>
     </div>
 
     <script>
@@ -160,6 +193,61 @@
                 "Подписка (1 - Активирована, 0 - Нет) (Безлимит)", "Активировать/Отменить подписку"
             ]
         };
+
+    function showTab(tabId) {
+        document.getElementById('subscribers').style.display = tabId === 'subscribers' ? 'block' : 'none';
+        document.getElementById('message').style.display = tabId === 'message' ? 'block' : 'none';
+
+        document.getElementById('tab-admins').classList.toggle('active', tabId === 'subscribers');
+        document.getElementById('tab-message').classList.toggle('active', tabId === 'message');
+    }
+
+    document.getElementById('send-button').addEventListener('click', async () => {
+        const message = document.getElementById('message-box').value.trim();
+
+        if (!message) {
+            alert('Введите сообщение перед отправкой.');
+            return;
+        }
+
+        const confirmed = confirm('Вы уверены, что хотите отправить сообщение всем пользователям?');
+        if (!confirmed) return;
+
+        try {
+            const response = await fetch('/api/broadcast', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message }),
+            });
+
+            const result = await response.json();
+            if (result.error) {
+                alert(`Ошибка: ${result.error}`);
+            } else {
+                alert('Сообщение успешно отправлено всем пользователям!');
+                document.getElementById('message-box').value = ''; // Очищаем поле ввода
+            }
+        } catch (error) {
+            alert('Ошибка при отправке сообщения.');
+        }
+    });
+
+    document.getElementById('clear-button').addEventListener('click', () => {
+        document.getElementById('message-box').value = ''; // Очищаем поле ввода
+    });
+
+        // Переключение вкладок
+    function switchTab(tabId) {
+        document.querySelectorAll('.table-container, .message-container').forEach(container => {
+            container.classList.remove('active');
+        });
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+
+        document.getElementById(tabId).classList.add('active');
+        document.getElementById(`tab-${tabId}`).classList.add('active');
+    }
 
     async function loadData() {
         const response = await fetch(`/api/data`);

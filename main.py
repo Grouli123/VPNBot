@@ -99,7 +99,7 @@ async def send_vpn_key(callback_query: CallbackQuery):
 
         # ⬇ ВАЖНО: Сохраняем `key_id`, а не `new_key`
         cursor.execute("INSERT INTO users (user_id, key_id, key, subscription_end, подписка) VALUES (?, ?, ?, ?, ?)",
-                       (user_id, key_id, new_key, 5, False))
+                       (user_id, key_id, new_key, 30, False))
         conn.commit()
         conn.close()
 
@@ -233,7 +233,7 @@ async def update_subscriptions():
         conn.close()
         
         # Запускаем обновление раз в день
-        await asyncio.sleep(30)
+        await asyncio.sleep(86400)
 
 # Основная функция
 async def main():
