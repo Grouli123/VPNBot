@@ -12,7 +12,7 @@ from aiogram.filters import Command
 from aiogram.enums import ContentType 
 
 # Настройки VPN
-TOKEN = "7366561859:AAG9z3zeJJs4iUtFHDwCvgIyikWB_qkOmVo"
+TOKEN = "7741477291:AAEnUfLEzqtDBx4ve0F-G2fgGPOdyBowLKQ"
 SERVER_HOST = "147.45.224.62"
 SERVER_PORT = "65146"  
 API_SECRET = "Kek-PEeOq-iXLyjmmuOtRQ"
@@ -60,6 +60,24 @@ async def generate_vpn_key(subscription: bool):
     except Exception as e:
         print(f"Ошибка при создании ключа: {e}")
         return None, None
+
+# Команда "поддержка"
+@dp.message(Command("support"))
+async def support_command(message: Message):
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="Связаться с поддержкой",
+                    url="https://t.me/MrGrouli"
+                )
+            ]
+        ]
+    )
+    await message.answer(
+        "📞 Если у вас возникли вопросы или проблемы, свяжитесь с нашей поддержкой по кнопке ниже:",
+        reply_markup=keyboard
+    )
 
 # Команда старт
 @dp.message(Command("start"))
@@ -182,11 +200,22 @@ async def confirm_payment(message: Message):
 
     key_id = key_data[0] if key_data else "Не найден"
     print(f"Отправка сообщения админу {ADMIN_ID}: Пользователь {user_id} оплатил подписку. Ключ: {key_id}")
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="Оплата не прошла",
+                    callback_data=f"payment_failed:{user_id}"
+                )
+            ]
+        ]
+    )
 
     # Отправляем сообщение админу с user_id и key_id
     await bot.send_message(
         ADMIN_ID,
-        f"📩 Пользователь {user_id} оплатил подписку.\n🔑 Ключ пользователя: {key_id}."
+        f"📩 Пользователь {user_id} оплатил подписку.\n🔑 Ключ пользователя: {key_id}.",
+        reply_markup=keyboard
     )
 
     # Пересылаем фото админу
@@ -195,6 +224,21 @@ async def confirm_payment(message: Message):
     )
 
     await message.answer("✅ Ваше подтверждение отправлено администратору. Ожидайте проверки.")
+
+@router.callback_query(lambda c: c.data.startswith("payment_failed"))
+async def payment_failed(callback_query: CallbackQuery):
+    # Получаем user_id из callback_data
+    user_id = int(callback_query.data.split(":")[1])
+
+    # Отправляем сообщение пользователю
+    await bot.send_message(
+        user_id,
+        "❌ Не верный скриншот!\n\nЕсли вы произвели оплату, пришлите правильный скриншот. "
+        "Если нет, то оплатите и пришлите скриншот перевода или чека."
+    )
+
+    # Подтверждаем нажатие кнопки администратору
+    await callback_query.answer("Сообщение отправлено пользователю.")
 
 # Функция для обновления подписок
 async def update_subscriptions():

@@ -15,7 +15,7 @@ CERT_SHA256 = "6c4d53ceb6fc4ba7c35c06cc6467f278b0234352626bb2fad23f3fe0b143a7cf"
 API_URL = f"https://{SERVER_HOST}:{SERVER_PORT}/{API_SECRET}"
 vpn_client = OutlineVPN(api_url=API_URL, cert_sha256=CERT_SHA256)
 
-TOKEN = "7366561859:AAG9z3zeJJs4iUtFHDwCvgIyikWB_qkOmVo"
+TOKEN = "7741477291:AAEnUfLEzqtDBx4ve0F-G2fgGPOdyBowLKQ"
 bot = Bot(token=TOKEN)
 
 app = Flask(__name__)
